@@ -35,20 +35,20 @@ class PointsController {
   }
 
   async create(request: Request, response: Response) {
+    const {
+      name,
+      email,
+      whatsapp,
+      latitude,
+      longitude,
+      city,
+      uf,
+      items,
+    } = request.body;
+  
+    const transaction = await knex.transaction();
+    
     try {
-      const {
-        name,
-        email,
-        whatsapp,
-        latitude,
-        longitude,
-        city,
-        uf,
-        items,
-      } = request.body;
-    
-      const transaction = await knex.transaction();
-    
       const point = {
         name,
         image: 'placeholder',
@@ -78,6 +78,7 @@ class PointsController {
         ...point,
       });
     } catch (error) {
+      transaction.rollback();
       return response.status(400).json({message: 'Error when creating', error })
     }
   }
