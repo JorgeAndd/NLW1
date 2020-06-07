@@ -9,4 +9,4 @@ const connection = knew({
   useNullAsDefault: true,
 });
 
-export default connnection;
+export default connection;
