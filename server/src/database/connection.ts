@@ -7,6 +7,11 @@ const connection = knew({
     filename: path.resolve(__dirname, 'database.sqlite'),
   },
   useNullAsDefault: true,
+  pool: {
+    afterCreate: (conn: any, cb: any) => {
+      conn.run('PRAGMA foreign_keys = ON', cb);
+    }
+  }
 });
 
 export default connection;
