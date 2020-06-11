@@ -48,6 +48,10 @@ const CreatePoint = () => {
 
   const [selectedUf, setSelectedUf] = useState<string>();
   const [selectedCity, setSelectedCity] = useState<string>();
+  const [initialPosition, setinitialPosition] = useState<MapPosition>({
+    latitude: 0,
+    longitude: 0,
+  });
   const [selectedPosition, setSelectedPosition] = useState<MapPosition>({
     latitude: 0,
     longitude: 0,
@@ -56,6 +60,17 @@ const CreatePoint = () => {
   useEffect(() => {
     api.get('items').then(response => {
       setItems(response.data);
+    });
+  }, []);
+
+  useEffect(() => {
+    navigator.geolocation.getCurrentPosition(position => {
+      const { latitude, longitude } = position.coords;
+
+      setinitialPosition({
+        latitude,
+        longitude,
+      });
     });
   }, []);
 
@@ -156,7 +171,7 @@ const CreatePoint = () => {
         </fieldset>
 
         <Map
-          center={[-15.7540088, -47.9009033]}
+          center={[initialPosition.latitude, initialPosition.longitude]}
           zoom={15}
           onClick={handleMapClick}
         >
