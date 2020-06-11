@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, ChangeEvent } from 'react';
 import { FiArrowLeft } from 'react-icons/fi';
 import { Link } from 'react-router-dom';
 import { Map, TileLayer, Marker } from 'react-leaflet';
 
+import axios from 'axios';
 import api from '../../services/api';
 
 import './styles.css';
@@ -14,14 +15,90 @@ interface Item {
   image_url: string;
 }
 
+interface UF {
+  id: number;
+  abbreviation: string;
+  name: string;
+}
+
+interface City {
+  name: string;
+}
+
+interface IBGEUFResponse {
+  id: number;
+  nome: string;
+  sigla: string;
+}
+
+interface IBGECityResponse {
+  nome: string;
+}
+
 const CreatePoint = () => {
   const [items, setItems] = useState<Item[]>([]);
+  const [ufs, setUfs] = useState<UF[]>([]);
+  const [cities, setCities] = useState<City[]>([]);
+  const [selectedUf, setSelectedUf] = useState<string>();
+  const [selectedCity, setSelectedCity] = useState<string>();
 
   useEffect(() => {
-    api.get('items').then((response) => {
+    api.get('items').then(response => {
       setItems(response.data);
     });
   }, []);
+
+  useEffect(() => {
+    axios
+      .get<IBGEUFResponse[]>(
+        'https://servicodados.ibge.gov.br/api/v1/localidades/estados',
+        {
+          params: {
+            orderBy: 'nome',
+          },
+        },
+      )
+      .then(response => {
+        const ufsData: UF[] = response.data.map(uf => {
+          return {
+            id: uf.id,
+            abbreviation: uf.sigla,
+            name: uf.nome,
+          };
+        });
+
+        setUfs(ufsData);
+      });
+  }, []);
+
+  useEffect(() => {
+    if (selectedUf === '') return;
+
+    axios
+      .get<IBGECityResponse[]>(
+        `https://servicodados.ibge.gov.br/api/v1/localidades/estados/${selectedUf}/municipios`,
+        {
+          params: {
+            orderBy: 'nome',
+          },
+        },
+      )
+      .then(response => {
+        const cityNames = response.data.map(city => {
+          return { name: city.nome };
+        });
+
+        setCities(cityNames);
+      });
+  }, [selectedUf]);
+
+  function handleSelectUf(event: ChangeEvent<HTMLSelectElement>) {
+    setSelectedUf(event.target.value);
+  }
+
+  function handleSelectCity(event: ChangeEvent<HTMLSelectElement>) {
+    setSelectedCity(event.target.value);
+  }
 
   return (
     <div id="page-create-point">
@@ -78,15 +155,35 @@ const CreatePoint = () => {
           <div className="field-group">
             <div className="field">
               <label htmlFor="uf">Estado (UF)</label>
-              <select name="uf" id="uf">
-                <option value="0">Selecione uma UF</option>
+              <select
+                name="uf"
+                id="uf"
+                value={selectedUf}
+                onChange={handleSelectUf}
+              >
+                <option value="">Selecione uma UF</option>
+                {ufs.map(uf => (
+                  <option key={uf.id} value={uf.abbreviation}>
+                    {uf.name}
+                  </option>
+                ))}
               </select>
             </div>
 
             <div className="field">
               <label htmlFor="city">Cidade</label>
-              <select name="city" id="city">
-                <option value="0">Selecione uma cidade</option>
+              <select
+                name="city"
+                id="city"
+                value={selectedCity}
+                onChange={handleSelectCity}
+              >
+                <option value="">Selecione uma cidade</option>
+                {cities.map(city => (
+                  <option key={city.name} value={city.name}>
+                    {city.name}
+                  </option>
+                ))}
               </select>
             </div>
           </div>
@@ -99,7 +196,7 @@ const CreatePoint = () => {
           </legend>
 
           <ul className="items-grid">
-            {items.map((i) => (
+            {items.map(i => (
               <li key={i.id}>
                 <img src={i.image_url} alt={i.title} />
                 <span>{i.title}</span>
