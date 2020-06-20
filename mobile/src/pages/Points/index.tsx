@@ -9,9 +9,11 @@ import {
   ScrollView,
   Image,
   StyleSheet,
+  Alert,
 } from "react-native";
 import MapView, { Marker } from "react-native-maps";
 import { SvgUri } from "react-native-svg";
+import * as Location from "expo-location";
 import api from "../../services/api";
 
 interface Item {
@@ -20,9 +22,27 @@ interface Item {
   image_url: string;
 }
 
+interface Point {
+  id: number;
+  name: string;
+  image: string;
+  latitude: number;
+  longitude: number;
+}
+
+interface MapPosition {
+  latitude?: number;
+  longitude?: number;
+}
+
 const Points = () => {
+  const [initialPosition, setInitialPosition] = useState<MapPosition>({
+    latitude: undefined,
+    longitude: undefined,
+  });
   const [items, setItems] = useState<Item[]>([]);
   const [selectedItemsIds, setSelectedItemsIds] = useState<number[]>([]);
+  const [points, setPoints] = useState<Point[]>([]);
 
   const navigation = useNavigation();
 
@@ -32,12 +52,52 @@ const Points = () => {
     });
   }, []);
 
+  useEffect(() => {
+    async function loadPosition() {
+      const { status } = await Location.requestPermissionsAsync();
+
+      if (status !== "granted") {
+        Alert.alert(
+          "Ops...",
+          "Precisamos de sua permissão para obter a localização"
+        );
+        return;
+      }
+
+      const location = await Location.getCurrentPositionAsync();
+      const { latitude, longitude } = location.coords;
+
+      setInitialPosition({
+        latitude,
+        longitude,
+      });
+    }
+
+    loadPosition();
+  }, []);
+
+  useEffect(() => {
+    api
+      .get("points", {
+        params: {
+          city: "Brasília",
+          uf: "DF",
+          items: [1],
+        },
+      })
+      .then((response) => {
+        setPoints(response.data);
+      });
+  }, []);
+
   function handleNavigateBack() {
     navigation.goBack();
   }
 
-  function handleNavigateToDetail() {
-    navigation.navigate("Detail");
+  function handleNavigateToDetail(id: number) {
+    navigation.navigate("Detail", {
+      point_id: id,
+    });
   }
 
   function handleSelectItem(item: Item) {
@@ -66,32 +126,39 @@ const Points = () => {
         </Text>
 
         <View style={styles.mapContainer}>
-          <MapView
-            style={styles.map}
-            initialRegion={{
-              latitude: -15.7584695,
-              longitude: -47.8891659,
-              latitudeDelta: 0.014,
-              longitudeDelta: 0.014,
-            }}
-          >
-            <Marker
-              style={styles.mapMarker}
-              coordinate={{ latitude: -15.7584695, longitude: -47.8891659 }}
-              onPress={handleNavigateToDetail}
+          {initialPosition.latitude && initialPosition.longitude && (
+            <MapView
+              style={styles.map}
+              initialRegion={{
+                latitude: initialPosition.latitude,
+                longitude: initialPosition.longitude,
+                latitudeDelta: 0.014,
+                longitudeDelta: 0.014,
+              }}
             >
-              <View style={styles.mapMarkerContainer}>
-                <Image
-                  style={styles.mapMarkerImage}
-                  source={{
-                    uri:
-                      "https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=400&q=60",
+              {points.map((point) => (
+                <Marker
+                  key={point.id}
+                  style={styles.mapMarker}
+                  coordinate={{
+                    latitude: point.latitude,
+                    longitude: point.longitude,
                   }}
-                />
-                <Text style={styles.mapMarkerTitle}>Mercado</Text>
-              </View>
-            </Marker>
-          </MapView>
+                  onPress={() => handleNavigateToDetail(point.id)}
+                >
+                  <View style={styles.mapMarkerContainer}>
+                    <Image
+                      style={styles.mapMarkerImage}
+                      source={{
+                        uri: point.image,
+                      }}
+                    />
+                    <Text style={styles.mapMarkerTitle}>{point.name}</Text>
+                  </View>
+                </Marker>
+              ))}
+            </MapView>
+          )}
         </View>
       </View>
 
