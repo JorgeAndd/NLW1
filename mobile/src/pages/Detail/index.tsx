@@ -8,6 +8,7 @@ import {
   Image,
   StyleSheet,
   SafeAreaView,
+  Linking,
 } from "react-native";
 import { RectButton } from "react-native-gesture-handler";
 import * as MailComposer from "expo-mail-composer";
@@ -49,6 +50,12 @@ const Detail = () => {
     navigation.goBack();
   }
 
+  function handleWhatsapp() {
+    Linking.openURL(
+      `whatsapp://send?phone=${data.point.whatsapp}&text=Tenho interesse sobre a coleta`
+    );
+  }
+
   function handleComposeMail() {
     MailComposer.composeAsync({
       subject: "Interesse na coleta de resíduos",
@@ -87,7 +94,7 @@ const Detail = () => {
       </View>
       <View>
         <View style={styles.footer}>
-          <RectButton style={styles.button} onPress={() => {}}>
+          <RectButton style={styles.button} onPress={handleWhatsapp}>
             <FontAwesome name="whatsapp" size={20} color="#FFF" />
             <Text style={styles.buttonText}>Whatsapp</Text>
           </RectButton>
